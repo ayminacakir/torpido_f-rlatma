@@ -3,7 +3,7 @@ import sys
 import cv2
 import numpy as np
 import math
-
+#değişiklik
 class TorpidoFirlatma:
     def __init__(self):
         if sys.platform == 'win32':
@@ -14,7 +14,7 @@ class TorpidoFirlatma:
             self.video_capture = cv2.VideoCapture(0, cv2.CAP_V4L)
 
         if not self.video_capture.isOpened():
-            print("Kamera baslatilamadi.")
+            print("Kamera başlatılamadı.")
             exit()
 
         # Renk aralıklarını tanımlama
@@ -24,7 +24,7 @@ class TorpidoFirlatma:
         self.lower_yellow = np.array([20, 100, 100])
         self.upper_yellow = np.array([30, 255, 255])
 
-        self.lower_red = np.array([0, 100, 100])
+        self.lower_red = np.array([0, 40, 40])
         self.upper_red = np.array([10, 255, 255])
 
         # Minimum piksel sayısı
@@ -47,18 +47,7 @@ class TorpidoFirlatma:
                 return largest_contour
         return None  # Boş bir kontur listesi döndür
 
-    def create_mask(self, hsv_frame, lower_color, upper_color):
-        mask = cv2.inRange(hsv_frame, lower_color, upper_color)
-        return mask
-
-    def apply_morphology(self, mask):
-        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, self.kernel)
-        return mask
-
     def detect_elips(self, frame):
-        subprocess.call("create_mask", shell=True)
-        subprocess.call("apply_morpohology", shell=True)
-
         # Görüntüyü HSV renk uzayına dönüştür
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
@@ -116,38 +105,40 @@ class TorpidoFirlatma:
             axis_length_minor = int(axis_lengths[1] / 2)
             aci = math.degrees(math.asin(axis_length_major / axis_length_minor))
             detected_angle[2] = aci
-            detected_circles.append((center, axis_length_major, "Kırmızı"))
+            detected_circles.append((center, axis_length_major,"Kirmizi"))
 
         return detected_circles, detected_angle
 
     def draw_circles(self, frame, circles, angles):
+        detected_circles = frame.copy()  # Görüntünün kopyasını oluştur
+
         for (center, radius, color), angle in zip(circles, angles):
             if color == "Yeşil":
-                cv2.ellipse(frame, center, (radius, radius), 0, 0, 360, (0, 255, 0), 2)
+                cv2.ellipse(detected_circles, center, (radius, radius), 0, 0, 360, (0, 255, 0), 2)
             elif color == "Sarı":
-                cv2.ellipse(frame, center, (radius, radius), 0, 0, 360, (0, 255, 255), 2)
-            elif color == "Kırmızı":
-                cv2.ellipse(frame, center, (radius, radius), 0, 0, 360, (0, 0, 255), 2)
+                cv2.ellipse(detected_circles, center, (radius, radius), 0, 0, 360, (0, 255, 255), 2)
+            elif color == "Kirmizi":
+                cv2.ellipse(detected_circles, center, (radius, radius), 0, 0, 360, (0, 0, 255), 2)
 
-            cv2.putText(frame, f"{color} (Zorluk: {self.classify_difficulty(color)})",
+            cv2.putText(detected_circles, f"{color} (Zorluk: {self.classify_difficulty(color)})",
                         (center[0] - radius, center[1] - radius - 30),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
             if angle is not None:
                 angle_text = f"Açı: {angle:.2f}°"
-                cv2.putText(frame, angle_text, (center[0] - radius, center[1] - radius - 10),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                cv2.putText(detected_circles, angle_text, (center[0] - radius, center[1] + radius + 20),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)  # Açıyı alt kısımda göster
 
             # Merkezi işaretle
-            cv2.circle(frame, center, 5, (0, 0, 255), -1)  # Merkezi işaretle, kırmızı renkte
-        return frame
+            cv2.circle(detected_circles, center, 5, (0, 0, 255), -1)  # Merkezi işaretle, kırmızı renkte
+        return detected_circles
 
     def classify_difficulty(self, color):
         if color == "Yeşil":
             return "Kolay"
         elif color == "Sarı":
             return "Orta"
-        elif color == "Kırmızı":
+        elif color == "Kirmizi":
             return "Zor"
         else:
             return "Bilinmeyen"
@@ -160,7 +151,7 @@ class TorpidoFirlatma:
 
             cv2.imshow('Detected Circles', detected_circles)
 
-            if cv2.waitKey(1) & 0xFF == ord('a'):
+            if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
         self.release()
